@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dayjs from "dayjs";
+import { stripHtml } from "string-strip-html";
+import { strict as assert } from "assert";
 
 const server = express();
 server.use(cors());
@@ -14,6 +16,8 @@ const interval = setInterval(clearInactiveParticipants, 15000);
 
 server.post("/participants", (req, res) => {
     const newParticipant = req.body;
+
+    newParticipant.name = stripHtml(newParticipant.name).result.trim();
 
     if (newParticipant.name === "" || participants.find((p) => p.name === newParticipant.name)) {
         res.sendStatus(400);
@@ -52,6 +56,8 @@ server.get("/messages", (req, res) => {
 server.post("/messages", (req, res) => {
     const newMessage = req.body;
     newMessage.from = req.headers.user;
+
+    newMessage = sanitizeMessage(newMessage);
 
     if (!validNewMessage(newMessage)) {
         res.sendStatus(400);
@@ -113,4 +119,12 @@ function clearInactiveParticipants() {
     participants = participants.filter((p) => now - p.lastStatus <= 10000);
 
     console.log("InactiveParticipants removed...");
+}
+
+function sanitizeMessage(message) {
+    message.to = stripHtml(message.to).result.trim();
+    message.from = stripHtml(message.to).result.trim();
+    message.type = stripHtml(message.type).result.trim();
+    message.text = stripHtml(message.text).result.trim();
+    return message
 }
