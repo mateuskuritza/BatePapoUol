@@ -3,6 +3,7 @@ import cors from "cors";
 import dayjs from "dayjs";
 import { stripHtml } from "string-strip-html";
 import { strict as assert } from "assert";
+import Joi from "joi";
 
 const server = express();
 server.use(cors());
@@ -19,7 +20,10 @@ server.post("/participants", (req, res) => {
 
     newParticipant.name = stripHtml(newParticipant.name).result.trim();
 
-    if (newParticipant.name === "" || participants.find((p) => p.name === newParticipant.name)) {
+    if (
+        validateUserPost.validate(newParticipant).error !== undefined ||
+        participants.find((p) => p.name === newParticipant.name)
+    ) {
         res.sendStatus(400);
         return;
     }
@@ -57,7 +61,6 @@ server.post("/messages", (req, res) => {
     const newMessage = sanitizeMessage(req.body);
     newMessage.from = stripHtml(req.headers.user).result.trim();
 
-
     if (!validNewMessage(newMessage)) {
         res.sendStatus(400);
         return;
@@ -72,7 +75,7 @@ server.post("/messages", (req, res) => {
 });
 
 server.post("/status", (req, res) => {
-    const thisUser = stripHtml(req.headers.user).result.trim(); 
+    const thisUser = stripHtml(req.headers.user).result.trim();
     const thisParticipant = participants.find((p) => p.name === thisUser);
     const index = participants.indexOf(thisParticipant);
 
@@ -87,19 +90,6 @@ server.post("/status", (req, res) => {
 
     res.sendStatus(200);
 });
-
-function validNewMessage(message) {
-    if (message.to === "" || message.text === "") {
-        return false;
-    }
-    if (!["message", "private_message"].includes(message.type)) {
-        return false;
-    }
-    if (!participants.find((p) => p.name === message.from)) {
-        return false;
-    }
-    return true;
-}
 
 function userMessagesFilter(user) {
     return messages.filter(
@@ -127,4 +117,28 @@ function sanitizeMessage(message) {
     message.type = stripHtml(message.type).result.trim();
     message.text = stripHtml(message.text).result.trim();
     return message;
+}
+
+const validateUserPost = Joi.object({
+    name: Joi.string().alphanum().min(3).required(),
+});
+
+const validateNewMessage = Joi.object({
+    to: Joi.string().alphanum().required(),
+    from: Joi.string().alphanum().required(),
+    text: Joi.string().alphanum().min(1).required(),
+    type: Joi.string().alphanum().required(),
+});
+
+function validNewMessage(message) {
+    if (validateNewMessage.validate(message).error !== undefined) {
+        return false;
+    }
+    if (!["message", "private_message"].includes(message.type)) {
+        return false;
+    }
+    if (!participants.find((p) => p.name === message.from)) {
+        return false;
+    }
+    return true;
 }
