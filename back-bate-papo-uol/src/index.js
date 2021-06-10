@@ -46,7 +46,7 @@ server.get("/participants", (req, res) => {
 
 server.get("/messages", (req, res) => {
     const limitMessages = req.query.limit || messages.length;
-    const thisUser = req.headers.user;
+    const thisUser = stripHtml(req.headers.user).result.trim();
     const messagesFiltered = userMessagesFilter(thisUser).slice(-limitMessages);
 
     res.status(200).send(messagesFiltered);
@@ -54,10 +54,9 @@ server.get("/messages", (req, res) => {
 });
 
 server.post("/messages", (req, res) => {
-    const newMessage = req.body;
-    newMessage.from = req.headers.user;
+    const newMessage = sanitizeMessage(req.body);
+    newMessage.from = stripHtml(req.headers.user).result.trim();
 
-    newMessage = sanitizeMessage(newMessage);
 
     if (!validNewMessage(newMessage)) {
         res.sendStatus(400);
@@ -68,11 +67,12 @@ server.post("/messages", (req, res) => {
     messages.push(newMessage);
 
     console.log("New message received");
+    console.log(newMessage);
     res.sendStatus(200);
 });
 
 server.post("/status", (req, res) => {
-    const thisUser = req.headers.user;
+    const thisUser = stripHtml(req.headers.user).result.trim(); 
     const thisParticipant = participants.find((p) => p.name === thisUser);
     const index = participants.indexOf(thisParticipant);
 
@@ -126,5 +126,5 @@ function sanitizeMessage(message) {
     message.from = stripHtml(message.to).result.trim();
     message.type = stripHtml(message.type).result.trim();
     message.text = stripHtml(message.text).result.trim();
-    return message
+    return message;
 }
