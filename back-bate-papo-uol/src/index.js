@@ -16,7 +16,7 @@ server.post("/participants", (req, res) => {
     const newParticipant = req.body;
 
     if (newParticipant.name === "" || participants.find((p) => p.name === newParticipant.name)) {
-        res.status(400);
+        res.sendStatus(400);
         return;
     }
 
@@ -31,14 +31,13 @@ server.post("/participants", (req, res) => {
         time: dayjs(Date.now()).format("HH:mm:ss"),
     };
     messages.push(newMessage);
-
-    res.status(200);
     console.log("New participant add...");
+    res.sendStatus(200);
 });
 
 server.get("/participants", (req, res) => {
-    res.send(participants);
     console.log("Send participants list...");
+    res.send(participants);
 });
 
 server.get("/messages", (req, res) => {
@@ -46,8 +45,7 @@ server.get("/messages", (req, res) => {
     const thisUser = req.headers.user;
     const messagesFiltered = userMessagesFilter(thisUser).slice(-limitMessages);
 
-    res.send(messagesFiltered);
-    res.status(200);
+    res.status(200).send(messagesFiltered);
     console.log("Send messages to front...");
 });
 
@@ -56,7 +54,7 @@ server.post("/messages", (req, res) => {
     newMessage.from = req.headers.user;
 
     if (!validNewMessage(newMessage)) {
-        res.status(400);
+        res.sendStatus(400);
         return;
     }
 
@@ -64,7 +62,7 @@ server.post("/messages", (req, res) => {
     messages.push(newMessage);
 
     console.log("New message received");
-    res.status(200);
+    res.sendStatus(200);
 });
 
 server.post("/status", (req, res) => {
@@ -73,8 +71,7 @@ server.post("/status", (req, res) => {
     const index = participants.indexOf(thisParticipant);
 
     if (!thisParticipant) {
-        console.log("Usuário não encontrado");
-        res.status(400);
+        res.sendStatus(400);
         return;
     }
 
@@ -82,7 +79,7 @@ server.post("/status", (req, res) => {
     participants.splice(index, 1, thisParticipant);
     console.log("Participant timestamp att");
 
-    res.status(200);
+    res.sendStatus(200);
 });
 
 function validNewMessage(message) {

@@ -20,7 +20,6 @@ function registrarParticipante() {
 function entrarNaSala() {
   carregarMensagens();
   carregarParticipantes();
-  console.log("entrei na sala");
   agendarAtualizacaoDeMensagens();
   agendarAtualizacaoDeParticipantes();
   agendarAtualizacaoDeStatus();
