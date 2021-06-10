@@ -2,19 +2,39 @@ import express from "express";
 import cors from "cors";
 import dayjs from "dayjs";
 import { stripHtml } from "string-strip-html";
-import { strict as assert } from "assert";
+import fs from "fs";
 import Joi from "joi";
 
+//  server config
 const server = express();
 server.use(cors());
 server.use(express.json());
 server.listen(4000, () => console.log("Running server..."));
 
-let participants = [];
-const messages = [];
+// data persistence
+if (!fs.existsSync("./back-bate-papo-uol/src/messages.json")) {
+    fs.writeFileSync("./back-bate-papo-uol/src/messages.json", JSON.stringify([]));
+}
 
+if (!fs.existsSync("./back-bate-papo-uol/src/participants.json")) {
+    fs.writeFileSync("./back-bate-papo-uol/src/participants.json", JSON.stringify([]));
+}
+
+function updateParticipantsJson() {
+    fs.writeFileSync("./back-bate-papo-uol/src/participants.json", JSON.stringify(participants, null, 2));
+}
+
+function updateMessagesJson() {
+    fs.writeFileSync("./back-bate-papo-uol/src/messages.json", JSON.stringify(messages, null, 2));
+}
+
+let participants = JSON.parse(fs.readFileSync("./back-bate-papo-uol/src/participants.json"));
+let messages = JSON.parse(fs.readFileSync("./back-bate-papo-uol/src/messages.json"));
+
+// remove inative users
 const interval = setInterval(clearInactiveParticipants, 15000);
 
+// routes
 server.post("/participants", (req, res) => {
     const newParticipant = req.body;
 
@@ -41,6 +61,7 @@ server.post("/participants", (req, res) => {
     messages.push(newMessage);
     console.log("New participant add...");
     res.sendStatus(200);
+    updateParticipantsJson();
 });
 
 server.get("/participants", (req, res) => {
@@ -72,6 +93,7 @@ server.post("/messages", (req, res) => {
     console.log("New message received");
     console.log(newMessage);
     res.sendStatus(200);
+    updateMessagesJson();
 });
 
 server.post("/status", (req, res) => {
@@ -89,11 +111,17 @@ server.post("/status", (req, res) => {
     console.log("Participant timestamp att");
 
     res.sendStatus(200);
+    updateParticipantsJson();
 });
 
 function userMessagesFilter(user) {
     return messages.filter(
-        (message) => message.type === "message" || message.type === "status" || message.from === user || message.to === user
+        (message) =>
+            message.type === "message" ||
+            message.type === "status" ||
+            message.from === user ||
+            message.to === user ||
+            message.to === "Todos"
     );
 }
 
@@ -108,9 +136,11 @@ function clearInactiveParticipants() {
 
     participants = participants.filter((p) => now - p.lastStatus <= 10000);
 
+    updateParticipantsJson();
     console.log("InactiveParticipants removed...");
 }
 
+// sanitize with strip-html library
 function sanitizeMessage(message) {
     message.to = stripHtml(message.to).result.trim();
     message.from = stripHtml(message.to).result.trim();
@@ -119,6 +149,7 @@ function sanitizeMessage(message) {
     return message;
 }
 
+// validate with Joi library
 const validateUserPost = Joi.object({
     name: Joi.string().alphanum().min(3).required(),
 });

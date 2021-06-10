@@ -1,0 +1,23 @@
+[
+  {
+    "from": "dasdasdasd",
+    "to": "Todos",
+    "text": "entra na sala...",
+    "type": "status",
+    "time": "20:26:36"
+  },
+  {
+    "to": "Todos",
+    "text": "dasdasdasd",
+    "type": "message",
+    "from": "dasdasdasd",
+    "time": "20:26:37"
+  },
+  {
+    "to": "Todos",
+    "text": "dasdasdad",
+    "type": "message",
+    "from": "dasdasdasd",
+    "time": "20:26:39"
+  }
+]
