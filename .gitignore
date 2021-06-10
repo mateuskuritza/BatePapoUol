@@ -1,2 +1,6 @@
 back-bate-papo-uol/node_modules
 .vscode
+
+back-bate-papo-uol/src/messages.json
+back-bate-papo-uol/src/participants.json
+
