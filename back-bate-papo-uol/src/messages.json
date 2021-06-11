@@ -1,23 +1,16 @@
 [
   {
-    "from": "dasdasdasd",
+    "from": "dsadada",
     "to": "Todos",
     "text": "entra na sala...",
     "type": "status",
-    "time": "20:26:36"
+    "time": "17:08:50"
   },
   {
     "to": "Todos",
-    "text": "dasdasdasd",
+    "text": "dasdsdasd",
     "type": "message",
-    "from": "dasdasdasd",
-    "time": "20:26:37"
-  },
-  {
-    "to": "Todos",
-    "text": "dasdasdad",
-    "type": "message",
-    "from": "dasdasdasd",
-    "time": "20:26:39"
+    "from": "dsadada",
+    "time": "17:09:04"
   }
 ]

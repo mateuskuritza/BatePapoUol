@@ -12,38 +12,34 @@ server.use(express.json());
 server.listen(4000, () => console.log("Running server..."));
 
 // data persistence
-if (!fs.existsSync("./back-bate-papo-uol/src/messages.json")) {
-    fs.writeFileSync("./back-bate-papo-uol/src/messages.json", JSON.stringify([]));
+if (!fs.existsSync("./src/messages.json")) {
+    fs.writeFileSync("./src/messages.json", JSON.stringify([]));
 }
 
-if (!fs.existsSync("./back-bate-papo-uol/src/participants.json")) {
-    fs.writeFileSync("./back-bate-papo-uol/src/participants.json", JSON.stringify([]));
+if (!fs.existsSync("./src/participants.json")) {
+    fs.writeFileSync("./src/participants.json", JSON.stringify([]));
 }
 
 function updateParticipantsJson() {
-    fs.writeFileSync("./back-bate-papo-uol/src/participants.json", JSON.stringify(participants, null, 2));
+    fs.writeFileSync("./src/participants.json", JSON.stringify(participants, null, 2));
 }
 
 function updateMessagesJson() {
-    fs.writeFileSync("./back-bate-papo-uol/src/messages.json", JSON.stringify(messages, null, 2));
+    fs.writeFileSync("./src/messages.json", JSON.stringify(messages, null, 2));
 }
 
-let participants = JSON.parse(fs.readFileSync("./back-bate-papo-uol/src/participants.json"));
-let messages = JSON.parse(fs.readFileSync("./back-bate-papo-uol/src/messages.json"));
+let participants = JSON.parse(fs.readFileSync("./src/participants.json"));
+let messages = JSON.parse(fs.readFileSync("./src/messages.json"));
 
-// remove inative users
+// remove inactive users
 const interval = setInterval(clearInactiveParticipants, 15000);
 
 // routes
 server.post("/participants", (req, res) => {
     const newParticipant = req.body;
 
-    newParticipant.name = stripHtml(newParticipant.name).result.trim();
-
-    if (
-        validateUserPost.validate(newParticipant).error !== undefined ||
-        participants.find((p) => p.name === newParticipant.name)
-    ) {
+    newParticipant.name = stripHtmlAndTrim(newParticipant.name);
+    if (!validWithJOI(validateUserSchema, newParticipant) || !availableUsername(newParticipant)) {
         res.sendStatus(400);
         return;
     }
@@ -59,19 +55,20 @@ server.post("/participants", (req, res) => {
         time: dayjs(Date.now()).format("HH:mm:ss"),
     };
     messages.push(newMessage);
-    console.log("New participant add...");
+
     res.sendStatus(200);
     updateParticipantsJson();
+    console.log("New participant add...");
 });
 
 server.get("/participants", (req, res) => {
-    console.log("Send participants list...");
     res.send(participants);
+    console.log("Send participants list...");
 });
 
 server.get("/messages", (req, res) => {
     const limitMessages = req.query.limit || messages.length;
-    const thisUser = stripHtml(req.headers.user).result.trim();
+    const thisUser = stripHtmlAndTrim(req.headers.user);
     const messagesFiltered = userMessagesFilter(thisUser).slice(-limitMessages);
 
     res.status(200).send(messagesFiltered);
@@ -80,7 +77,7 @@ server.get("/messages", (req, res) => {
 
 server.post("/messages", (req, res) => {
     const newMessage = sanitizeMessage(req.body);
-    newMessage.from = stripHtml(req.headers.user).result.trim();
+    newMessage.from = stripHtmlAndTrim(req.headers.user);
 
     if (!validNewMessage(newMessage)) {
         res.sendStatus(400);
@@ -90,14 +87,13 @@ server.post("/messages", (req, res) => {
     newMessage.time = dayjs(Date.now()).format("HH:mm:ss");
     messages.push(newMessage);
 
-    console.log("New message received");
-    console.log(newMessage);
     res.sendStatus(200);
     updateMessagesJson();
+    console.log("New message received");
 });
 
 server.post("/status", (req, res) => {
-    const thisUser = stripHtml(req.headers.user).result.trim();
+    const thisUser = stripHtmlAndTrim(req.headers.user);
     const thisParticipant = participants.find((p) => p.name === thisUser);
     const index = participants.indexOf(thisParticipant);
 
@@ -108,10 +104,10 @@ server.post("/status", (req, res) => {
 
     thisParticipant.lastStatus = Date.now();
     participants.splice(index, 1, thisParticipant);
-    console.log("Participant timestamp att");
 
     res.sendStatus(200);
     updateParticipantsJson();
+    console.log("Participant timestamp att");
 });
 
 function userMessagesFilter(user) {
@@ -142,19 +138,19 @@ function clearInactiveParticipants() {
 
 // sanitize with strip-html library
 function sanitizeMessage(message) {
-    message.to = stripHtml(message.to).result.trim();
-    message.from = stripHtml(message.to).result.trim();
-    message.type = stripHtml(message.type).result.trim();
-    message.text = stripHtml(message.text).result.trim();
+    message.to = stripHtmlAndTrim(message.to);
+    message.from = stripHtmlAndTrim(message.to);
+    message.type = stripHtmlAndTrim(message.type);
+    message.text = stripHtmlAndTrim(message.text);
     return message;
 }
 
-// validate with Joi library
-const validateUserPost = Joi.object({
+// validate with Joi library schemas
+const validateUserSchema = Joi.object({
     name: Joi.string().alphanum().min(3).required(),
 });
 
-const validateNewMessage = Joi.object({
+const validateNewMessageSchema = Joi.object({
     to: Joi.string().alphanum().required(),
     from: Joi.string().alphanum().required(),
     text: Joi.string().alphanum().min(1).required(),
@@ -162,7 +158,7 @@ const validateNewMessage = Joi.object({
 });
 
 function validNewMessage(message) {
-    if (validateNewMessage.validate(message).error !== undefined) {
+    if (!validWithJOI(validateNewMessageSchema, message)) {
         return false;
     }
     if (!["message", "private_message"].includes(message.type)) {
@@ -172,4 +168,16 @@ function validNewMessage(message) {
         return false;
     }
     return true;
+}
+
+function stripHtmlAndTrim(text) {
+    return stripHtml(text).result.trim();
+}
+
+function validWithJOI(schema, value) {
+    return schema.validate(value).error === undefined;
+}
+
+function availableUsername(participant) {
+    return participants.find((p) => p.name === participant.name);
 }
